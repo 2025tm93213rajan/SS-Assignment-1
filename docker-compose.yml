@@ -1,0 +1,248 @@
+services:
+  # ============================================================================
+  # 1. Polyglot Persistence & Data Stores
+  # ============================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: seatlock-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_master_pass
+    volumes:
+      - ./docker/postgres/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - seatlock-network
+
+  mongo:
+    image: mongo:7.0
+    container_name: seatlock-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo_admin
+      MONGO_INITDB_ROOT_PASSWORD: mongo_master_pass
+    volumes:
+      - ./docker/mongo/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'db.runCommand(\"ping\").ok' | mongosh localhost:27017/test --quiet"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - seatlock-network
+
+  # ============================================================================
+  # 2. In-Memory Cache & Message Broker
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: seatlock-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - seatlock-network
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: seatlock-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"     # AMQP protocol
+      - "15672:15672"   # Management Web UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - seatlock-network
+
+  # ============================================================================
+  # 3. Autonomous Microservices (Database-per-Service)
+  # ============================================================================
+  inventory-service:
+    build:
+      context: ./services/inventory
+      dockerfile: Dockerfile
+    container_name: seatlock-inventory-service
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    environment:
+      SERVICE_NAME: inventory-service
+      PORT: 8002
+      DATABASE_URL: postgresql+asyncpg://inventory_user:inventory_pass@postgres:5432/inventory_db
+      LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - seatlock-network
+
+  booking-service:
+    build:
+      context: ./services/booking
+      dockerfile: Dockerfile
+    container_name: seatlock-booking-service
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      SERVICE_NAME: booking-service
+      PORT: 8001
+      DATABASE_URL: postgresql+asyncpg://booking_user:booking_pass@postgres:5432/booking_db
+      INVENTORY_SERVICE_URL: http://inventory-service:8002
+      PAYMENT_SERVICE_URL: http://payment-service:8003
+      TICKETING_SERVICE_URL: http://ticketing-service:8005
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      inventory-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      ticketing-service:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - seatlock-network
+
+  payment-service:
+    build:
+      context: ./services/payment
+      dockerfile: Dockerfile
+    container_name: seatlock-payment-service
+    restart: unless-stopped
+    ports:
+      - "8003:8003"
+    environment:
+      SERVICE_NAME: payment-service
+      PORT: 8003
+      MONGO_URI: mongodb://payment_user:payment_pass@mongo:27017/payment_db?authSource=payment_db
+      PAYMENT_DELAY_MS: 0
+      PAYMENT_CHAOS_MODE: "false"
+      LOG_LEVEL: info
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - seatlock-network
+
+  ticketing-service:
+    build:
+      context: ./services/ticketing
+      dockerfile: Dockerfile
+    container_name: seatlock-ticketing-service
+    restart: unless-stopped
+    ports:
+      - "8005:8005"
+    environment:
+      SERVICE_NAME: ticketing-service
+      PORT: 8005
+      DATABASE_URL: postgresql+asyncpg://ticketing_user:ticketing_pass@postgres:5432/ticketing_db
+      LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - seatlock-network
+
+  notification-service:
+    build:
+      context: ./services/notification
+      dockerfile: Dockerfile
+    container_name: seatlock-notification-service
+    restart: unless-stopped
+    ports:
+      - "8004:8004"
+    environment:
+      SERVICE_NAME: notification-service
+      PORT: 8004
+      MONGO_URI: mongodb://notif_user:notif_pass@mongo:27017/notification_db?authSource=notification_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      RABBITMQ_EXCHANGE: seatlock.events
+      RABBITMQ_QUEUE: booking.notifications
+      LOG_LEVEL: info
+    depends_on:
+      mongo:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - seatlock-network
+
+  # ============================================================================
+  # 4. API Gateway Ingress
+  # ============================================================================
+  api-gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: seatlock-api-gateway
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      SERVICE_NAME: api-gateway
+      PORT: 8000
+      REDIS_URL: redis://redis:6379
+      BOOKING_SERVICE_URL: http://booking-service:8001
+      INVENTORY_SERVICE_URL: http://inventory-service:8002
+      PAYMENT_SERVICE_URL: http://payment-service:8003
+      TICKETING_SERVICE_URL: http://ticketing-service:8005
+      NOTIFICATION_SERVICE_URL: http://notification-service:8004
+      RATE_LIMIT_MAX_REQUESTS: 200
+      RATE_LIMIT_WINDOW_SECONDS: 60
+      LOG_LEVEL: info
+    depends_on:
+      redis:
+        condition: service_healthy
+      booking-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      ticketing-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+    networks:
+      - seatlock-network
+
+# ==============================================================================
+# Volumes & Isolated Bridge Network
+# ==============================================================================
+volumes:
+  postgres_data:
+  mongo_data:
+  redis_data:
+  rabbitmq_data:
+
+networks:
+  seatlock-network:
+    driver: bridge
