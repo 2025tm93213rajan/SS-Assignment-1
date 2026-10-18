@@ -1,0 +1,371 @@
+Timestamp: 2026-10-18T06:42:42Z
+Resource: COLDPLAY-VIP-A1 (Capacity: 5)
+Parallel Requests: 20
+Success Count (201): 5
+Conflict Count (409): 15
+Final Available: 0
+Final Locked: 5
+
+Full Results JSON:
+[
+  {
+    "request_id": 1,
+    "status_code": 201,
+    "duration_ms": 138.47,
+    "correlation_id": "corr-ch1-req-01-1792305762458",
+    "response": {
+      "status": "RESERVED",
+      "reservation_token": "tok-bbbece970292498e",
+      "quota_id": "COLDPLAY-VIP-A1",
+      "quantity": 1,
+      "remaining_available": 2,
+      "version": 4,
+      "expires_at": "2026-10-18T06:47:42.574087Z"
+    }
+  },
+  {
+    "request_id": 2,
+    "status_code": 201,
+    "duration_ms": 123.69,
+    "correlation_id": "corr-ch1-req-02-1792305762459",
+    "response": {
+      "status": "RESERVED",
+      "reservation_token": "tok-9ccfebf039ec43d2",
+      "quota_id": "COLDPLAY-VIP-A1",
+      "quantity": 1,
+      "remaining_available": 3,
+      "version": 3,
+      "expires_at": "2026-10-18T06:47:42.547768Z"
+    }
+  },
+  {
+    "request_id": 3,
+    "status_code": 409,
+    "duration_ms": 165.18,
+    "correlation_id": "corr-ch1-req-03-1792305762459",
+    "response": {
+      "status": "error",
+      "code": "INSUFFICIENT_INVENTORY",
+      "message": "Insufficient inventory for quota 'COLDPLAY-VIP-A1'. Requested 1, but only 0 available.",
+      "correlation_id": "corr-ch1-req-03-1792305762459",
+      "service": "inventory-service",
+      "timestamp": "2026-10-18T06:42:42.623771+00:00",
+      "details": {
+        "quota_id": "COLDPLAY-VIP-A1",
+        "requested": 1,
+        "available": 0
+      }
+    }
+  },
+  {
+    "request_id": 4,
+    "status_code": 201,
+    "duration_ms": 87.64,
+    "correlation_id": "corr-ch1-req-04-1792305762460",
+    "response": {
+      "status": "RESERVED",
+      "reservation_token": "tok-036886bae3724804",
+      "quota_id": "COLDPLAY-VIP-A1",
+      "quantity": 1,
+      "remaining_available": 4,
+      "version": 2,
+      "expires_at": "2026-10-18T06:47:42.515622Z"
+    }
+  },
+  {
+    "request_id": 5,
+    "status_code": 409,
+    "duration_ms": 163.4,
+    "correlation_id": "corr-ch1-req-05-1792305762460",
+    "response": {
+      "status": "error",
+      "code": "INSUFFICIENT_INVENTORY",
+      "message": "Insufficient inventory for quota 'COLDPLAY-VIP-A1'. Requested 1, but only 0 available.",
+      "correlation_id": "corr-ch1-req-05-1792305762460",
+      "service": "inventory-service",
+      "timestamp": "2026-10-18T06:42:42.622246+00:00",
+      "details": {
+        "quota_id": "COLDPLAY-VIP-A1",
+        "requested": 1,
+        "available": 0
+      }
+    }
+  },
+  {
+    "request_id": 6,
+    "status_code": 409,
+    "duration_ms": 151.78,
+    "correlation_id": "corr-ch1-req-06-1792305762460",
+    "response": {
+      "status": "error",
+      "code": "INSUFFICIENT_INVENTORY",
+      "message": "Insufficient inventory for quota 'COLDPLAY-VIP-A1'. Requested 1, but only 0 available.",
+      "correlation_id": "corr-ch1-req-06-1792305762460",
+      "service": "inventory-service",
+      "timestamp": "2026-10-18T06:42:42.610389+00:00",
+      "details": {
+        "quota_id": "COLDPLAY-VIP-A1",
+        "requested": 1,
+        "available": 0
+      }
+    }
+  },
+  {
+    "request_id": 7,
+    "status_code": 409,
+    "duration_ms": 161.26,
+    "correlation_id": "corr-ch1-req-07-1792305762460",
+    "response": {
+      "status": "error",
+      "code": "INSUFFICIENT_INVENTORY",
+      "message": "Insufficient inventory for quota 'COLDPLAY-VIP-A1'. Requested 1, but only 0 available.",
+      "correlation_id": "corr-ch1-req-07-1792305762460",
+      "service": "inventory-service",
+      "timestamp": "2026-10-18T06:42:42.619904+00:00",
+      "details": {
+        "quota_id": "COLDPLAY-VIP-A1",
+        "requested": 1,
+        "available": 0
+      }
+    }
+  },
+  {
+    "request_id": 8,
+    "status_code": 409,
+    "duration_ms": 157.95,
+    "correlation_id": "corr-ch1-req-08-1792305762460",
+    "response": {
+      "status": "error",
+      "code": "INSUFFICIENT_INVENTORY",
+      "message": "Insufficient inventory for quota 'COLDPLAY-VIP-A1'. Requested 1, but only 0 available.",
+      "correlation_id": "corr-ch1-req-08-1792305762460",
+      "service": "inventory-service",
+      "timestamp": "2026-10-18T06:42:42.616420+00:00",
+      "details": {
+        "quota_id": "COLDPLAY-VIP-A1",
+        "requested": 1,
+        "available": 0
+      }
+    }
+  },
+  {
+    "request_id": 9,
+    "status_code": 409,
+    "duration_ms": 167.2,
+    "correlation_id": "corr-ch1-req-09-1792305762460",
+    "response": {
+      "status": "error",
+      "code": "INSUFFICIENT_INVENTORY",
+      "message": "Insufficient inventory for quota 'COLDPLAY-VIP-A1'. Requested 1, but only 0 available.",
+      "correlation_id": "corr-ch1-req-09-1792305762460",
+      "service": "inventory-service",
+      "timestamp": "2026-10-18T06:42:42.625335+00:00",
+      "details": {
+        "quota_id": "COLDPLAY-VIP-A1",
+        "requested": 1,
+        "available": 0
+      }
+    }
+  },
+  {
+    "request_id": 10,
+    "status_code": 409,
+    "duration_ms": 155.83,
+    "correlation_id": "corr-ch1-req-10-1792305762461",
+    "response": {
+      "status": "error",
+      "code": "INSUFFICIENT_INVENTORY",
+      "message": "Insufficient inventory for quota 'COLDPLAY-VIP-A1'. Requested 1, but only 0 available.",
+      "correlation_id": "corr-ch1-req-10-1792305762461",
+      "service": "inventory-service",
+      "timestamp": "2026-10-18T06:42:42.614924+00:00",
+      "details": {
+        "quota_id": "COLDPLAY-VIP-A1",
+        "requested": 1,
+        "available": 0
+      }
+    }
+  },
+  {
+    "request_id": 11,
+    "status_code": 201,
+    "duration_ms": 144.24,
+    "correlation_id": "corr-ch1-req-11-1792305762461",
+    "response": {
+      "status": "RESERVED",
+      "reservation_token": "tok-bd43d2f1d09a4ebf",
+      "quota_id": "COLDPLAY-VIP-A1",
+      "quantity": 1,
+      "remaining_available": 0,
+      "version": 6,
+      "expires_at": "2026-10-18T06:47:42.598357Z"
+    }
+  },
+  {
+    "request_id": 12,
+    "status_code": 409,
+    "duration_ms": 170.52,
+    "correlation_id": "corr-ch1-req-12-1792305762461",
+    "response": {
+      "status": "error",
+      "code": "INSUFFICIENT_INVENTORY",
+      "message": "Insufficient inventory for quota 'COLDPLAY-VIP-A1'. Requested 1, but only 0 available.",
+      "correlation_id": "corr-ch1-req-12-1792305762461",
+      "service": "inventory-service",
+      "timestamp": "2026-10-18T06:42:42.630297+00:00",
+      "details": {
+        "quota_id": "COLDPLAY-VIP-A1",
+        "requested": 1,
+        "available": 0
+      }
+    }
+  },
+  {
+    "request_id": 13,
+    "status_code": 409,
+    "duration_ms": 153.68,
+    "correlation_id": "corr-ch1-req-13-1792305762461",
+    "response": {
+      "status": "error",
+      "code": "INSUFFICIENT_INVENTORY",
+      "message": "Insufficient inventory for quota 'COLDPLAY-VIP-A1'. Requested 1, but only 0 available.",
+      "correlation_id": "corr-ch1-req-13-1792305762461",
+      "service": "inventory-service",
+      "timestamp": "2026-10-18T06:42:42.612872+00:00",
+      "details": {
+        "quota_id": "COLDPLAY-VIP-A1",
+        "requested": 1,
+        "available": 0
+      }
+    }
+  },
+  {
+    "request_id": 14,
+    "status_code": 409,
+    "duration_ms": 169.42,
+    "correlation_id": "corr-ch1-req-14-1792305762461",
+    "response": {
+      "status": "error",
+      "code": "INSUFFICIENT_INVENTORY",
+      "message": "Insufficient inventory for quota 'COLDPLAY-VIP-A1'. Requested 1, but only 0 available.",
+      "correlation_id": "corr-ch1-req-14-1792305762461",
+      "service": "inventory-service",
+      "timestamp": "2026-10-18T06:42:42.628410+00:00",
+      "details": {
+        "quota_id": "COLDPLAY-VIP-A1",
+        "requested": 1,
+        "available": 0
+      }
+    }
+  },
+  {
+    "request_id": 15,
+    "status_code": 201,
+    "duration_ms": 139.36,
+    "correlation_id": "corr-ch1-req-15-1792305762461",
+    "response": {
+      "status": "RESERVED",
+      "reservation_token": "tok-12d3276410b14616",
+      "quota_id": "COLDPLAY-VIP-A1",
+      "quantity": 1,
+      "remaining_available": 1,
+      "version": 5,
+      "expires_at": "2026-10-18T06:47:42.592000Z"
+    }
+  },
+  {
+    "request_id": 16,
+    "status_code": 409,
+    "duration_ms": 174.27,
+    "correlation_id": "corr-ch1-req-16-1792305762461",
+    "response": {
+      "status": "error",
+      "code": "INSUFFICIENT_INVENTORY",
+      "message": "Insufficient inventory for quota 'COLDPLAY-VIP-A1'. Requested 1, but only 0 available.",
+      "correlation_id": "corr-ch1-req-16-1792305762461",
+      "service": "inventory-service",
+      "timestamp": "2026-10-18T06:42:42.634534+00:00",
+      "details": {
+        "quota_id": "COLDPLAY-VIP-A1",
+        "requested": 1,
+        "available": 0
+      }
+    }
+  },
+  {
+    "request_id": 17,
+    "status_code": 409,
+    "duration_ms": 148.02,
+    "correlation_id": "corr-ch1-req-17-1792305762461",
+    "response": {
+      "status": "error",
+      "code": "INSUFFICIENT_INVENTORY",
+      "message": "Insufficient inventory for quota 'COLDPLAY-VIP-A1'. Requested 1, but only 0 available.",
+      "correlation_id": "corr-ch1-req-17-1792305762461",
+      "service": "inventory-service",
+      "timestamp": "2026-10-18T06:42:42.608686+00:00",
+      "details": {
+        "quota_id": "COLDPLAY-VIP-A1",
+        "requested": 1,
+        "available": 0
+      }
+    }
+  },
+  {
+    "request_id": 18,
+    "status_code": 409,
+    "duration_ms": 175.96,
+    "correlation_id": "corr-ch1-req-18-1792305762461",
+    "response": {
+      "status": "error",
+      "code": "INSUFFICIENT_INVENTORY",
+      "message": "Insufficient inventory for quota 'COLDPLAY-VIP-A1'. Requested 1, but only 0 available.",
+      "correlation_id": "corr-ch1-req-18-1792305762461",
+      "service": "inventory-service",
+      "timestamp": "2026-10-18T06:42:42.635985+00:00",
+      "details": {
+        "quota_id": "COLDPLAY-VIP-A1",
+        "requested": 1,
+        "available": 0
+      }
+    }
+  },
+  {
+    "request_id": 19,
+    "status_code": 409,
+    "duration_ms": 172.12,
+    "correlation_id": "corr-ch1-req-19-1792305762461",
+    "response": {
+      "status": "error",
+      "code": "INSUFFICIENT_INVENTORY",
+      "message": "Insufficient inventory for quota 'COLDPLAY-VIP-A1'. Requested 1, but only 0 available.",
+      "correlation_id": "corr-ch1-req-19-1792305762461",
+      "service": "inventory-service",
+      "timestamp": "2026-10-18T06:42:42.632163+00:00",
+      "details": {
+        "quota_id": "COLDPLAY-VIP-A1",
+        "requested": 1,
+        "available": 0
+      }
+    }
+  },
+  {
+    "request_id": 20,
+    "status_code": 409,
+    "duration_ms": 145.85,
+    "correlation_id": "corr-ch1-req-20-1792305762461",
+    "response": {
+      "status": "error",
+      "code": "INSUFFICIENT_INVENTORY",
+      "message": "Insufficient inventory for quota 'COLDPLAY-VIP-A1'. Requested 1, but only 0 available.",
+      "correlation_id": "corr-ch1-req-20-1792305762461",
+      "service": "inventory-service",
+      "timestamp": "2026-10-18T06:42:42.605094+00:00",
+      "details": {
+        "quota_id": "COLDPLAY-VIP-A1",
+        "requested": 1,
+        "available": 0
+      }
+    }
+  }
+]

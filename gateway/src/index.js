@@ -27,11 +27,9 @@ try {
     retryStrategy: (times) => Math.min(times * 100, 3000),
     maxRetriesPerRequest: 1
   });
-  redis.on('error', (err) => {
-    // Non-fatal, log warning
-  });
+  redis.on('error', () => {});
 } catch (e) {
-  // Continue without Redis rate limiter if unreachable
+  // Non-fatal
 }
 
 // Correlation ID & structured logging middleware
@@ -113,11 +111,12 @@ app.get('/', (req, res) => {
   });
 });
 
-// Helper proxy factory injecting correlation ID header
-const createServiceProxy = (targetUrl) => {
+// Helper proxy factory preserving full path (/api/v1/...)
+const createServiceProxy = (pathPrefix, targetUrl) => {
   return createProxyMiddleware({
     target: targetUrl,
     changeOrigin: true,
+    pathFilter: (pathname) => pathname.startsWith(pathPrefix),
     on: {
       proxyReq: (proxyReq, req) => {
         if (req.correlationId) {
@@ -148,12 +147,12 @@ const createServiceProxy = (targetUrl) => {
   });
 };
 
-// Route proxies
-app.use('/api/v1/bookings', createServiceProxy(BOOKING_SERVICE_URL));
-app.use('/api/v1/inventory', createServiceProxy(INVENTORY_SERVICE_URL));
-app.use('/api/v1/payments', createServiceProxy(PAYMENT_SERVICE_URL));
-app.use('/api/v1/tickets', createServiceProxy(TICKETING_SERVICE_URL));
-app.use('/api/v1/notifications', createServiceProxy(NOTIFICATION_SERVICE_URL));
+// Route proxies with pathFilter to preserve full path /api/v1/...
+app.use(createServiceProxy('/api/v1/bookings', BOOKING_SERVICE_URL));
+app.use(createServiceProxy('/api/v1/inventory', INVENTORY_SERVICE_URL));
+app.use(createServiceProxy('/api/v1/payments', PAYMENT_SERVICE_URL));
+app.use(createServiceProxy('/api/v1/tickets', TICKETING_SERVICE_URL));
+app.use(createServiceProxy('/api/v1/notifications', NOTIFICATION_SERVICE_URL));
 
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, '0.0.0.0', () => {
