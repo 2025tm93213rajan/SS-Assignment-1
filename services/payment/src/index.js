@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
+const { connectDB, mongoose } = require('./db');
+const paymentRoutes = require('./routes/paymentRoutes');
 
 const SERVICE_NAME = process.env.SERVICE_NAME || 'payment-service';
 const PORT = parseInt(process.env.PORT || '8003', 10);
@@ -9,6 +11,9 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Initialize MongoDB connection
+connectDB();
 
 // Correlation ID & structured logging middleware
 app.use((req, res, next) => {
@@ -23,7 +28,7 @@ app.use((req, res, next) => {
       timestamp: new Date().toISOString(),
       service: SERVICE_NAME,
       level: res.statusCode >= 500 ? 'ERROR' : 'INFO',
-      message: `${req.method} ${req.path} ${res.statusCode} ${durationMs}ms`,
+      message: `${req.method} ${req.originalUrl || req.path} ${res.statusCode} ${durationMs}ms`,
       correlation_id: corrId
     };
     console.log(JSON.stringify(logEntry));
@@ -34,9 +39,14 @@ app.use((req, res, next) => {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'UP',
+  const dbState = mongoose.connection.readyState;
+  // 1: connected, 2: connecting
+  const isHealthy = dbState === 1 || dbState === 2;
+
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? 'UP' : 'DEGRADED',
     service: SERVICE_NAME,
+    database: dbState === 1 ? 'connected' : 'disconnected',
     version: '1.0.0',
     timestamp: new Date().toISOString()
   });
@@ -46,9 +56,13 @@ app.get('/', (req, res) => {
   res.status(200).json({
     service: SERVICE_NAME,
     status: 'running',
-    health: '/health'
+    health: '/health',
+    version: '1.0.0'
   });
 });
+
+// Mount Payment Routes
+app.use('/api/v1/payments', paymentRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
@@ -62,10 +76,10 @@ app.use((err, req, res, next) => {
     correlation_id: corrId
   }));
 
-  res.status(500).json({
+  res.status(err.status || 500).json({
     status: 'error',
-    code: 'INTERNAL_SERVER_ERROR',
-    message: 'An unexpected error occurred in payment-service',
+    code: err.code || 'INTERNAL_SERVER_ERROR',
+    message: err.message || 'An unexpected error occurred in payment-service',
     correlation_id: corrId,
     service: SERVICE_NAME,
     timestamp: new Date().toISOString()
