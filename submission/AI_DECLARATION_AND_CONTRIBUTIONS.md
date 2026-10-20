@@ -57,7 +57,30 @@ The project was executed by a collaborative team of 3 M.Tech Software Systems ca
 
 ---
 
-## 3. Academic Integrity Declaration
+## 4. Individual Student Reflections
+
+### 4.1 Member 1 (Lead Presenter & Architecture Lead)
+- **Modules Built**: API Gateway (Node.js/Express, Redis token-bucket rate limiting), Inventory Service (Python FastAPI, PostgreSQL `inventory_db`), Docker Compose infrastructure orchestration.
+- **Hardest Problem Solved**: Eliminating race conditions and over-allocation under extreme concurrent burst traffic (Challenge 1). In early tests, a naive application-level read-check-then-update allowed multiple threads to read the same available seat count simultaneously, causing negative inventory balances (-3 seats). Moving the invariant check into a single atomic SQL statement (`UPDATE seat_inventories SET available_seats = available_seats - :qty WHERE available_seats >= :qty`) utilized PostgreSQL's native MVCC row-level write lock. This guaranteed 100% mathematical consistency without external distributed locks or deadlocks.
+- **What I Would Change**: In our local single-node Docker Compose setup, PostgreSQL write locks create a serialization bottleneck under loads exceeding 3,000 requests per second. For Assignment 2 in Kubernetes, I would implement an in-memory distributed lease reservation tier in Redis using Lua scripts for pre-allocation, asynchronously flushing confirmed reservations to PostgreSQL to achieve $10\times$ higher throughput.
+
+---
+
+### 4.2 Member 2 (Frontend & Distributed Saga Lead)
+- **Modules Built**: Next.js 14 App Router dashboard with glassmorphism UI and real-time telemetry, Booking Service (FastAPI, PostgreSQL `booking_db`) with Distributed Saga Orchestrator (`src/saga.py`), Ticketing Service (`ticketing_db`) with deterministic berth allocation and Indian Railway PNR generation.
+- **Hardest Problem Solved**: Guaranteeing consistency across the multi-step Distributed Saga without two-phase commit (2PC). When a payment is declined by the payment gateway (simulated via card ending in `0002`), the orchestrator must execute semantic backward compensation (`POST /api/v1/inventory/release`) to restore held seats. The key challenge was ensuring that the compensation endpoint itself is strictly idempotent—if a network timeout occurs during compensation, retrying the release must not double-increment the quota pool.
+- **What I Would Change**: Currently, the Saga Orchestrator coordinates steps synchronously over HTTP. While this provides straightforward step-by-step audit logging in `saga_step_logs`, it leaves client connections open during upstream latency spikes. For Assignment 2, I would transition the Saga to a fully asynchronous choreography or transactional outbox pattern using RabbitMQ events to decouple client response time from fulfillment processing.
+
+---
+
+### 4.3 Member 3 (Idempotency, AMQP & Reliability Lead)
+- **Modules Built**: Payment Service (Node.js/Express, MongoDB `payment_db`) with Two-Phase Cryptographic Idempotency middleware (`BR3`), Notification Service (`notification_db`) with RabbitMQ AMQP topic consumer and deduplication store, automated challenge benchmark scripts (`challenge1`, `challenge2`, `challenge3D`, `challenge3C`).
+- **Hardest Problem Solved**: Resolving the concurrent arrival race condition in payment idempotency (Challenge 2). A simple replay cache works for sequential repeated requests, but when 10 network retries arrive at the exact same millisecond, all 10 would find no cached entry and attempt to charge simultaneously. I designed an atomic two-phase lock in MongoDB: the first thread atomically inserts a lock document with `status: "IN_PROGRESS"`. Concurrent arrivals catch the duplicate key error, enter a polling wait loop (`waitForCompletion`), and receive the completed result once the first thread finishes. This guarantees strictly 1 financial ledger entry.
+- **What I Would Change**: In the Notification Service AMQP consumer, unhandled exceptions currently risk unacknowledged message deadlocks. In Assignment 2, I would implement a Dead Letter Exchange (DLX) with dead-letter queues (DLQ), automated exponential backoff retries, and alerting thresholds.
+
+---
+
+## 5. Academic Integrity Declaration
 
 We hereby certify that:
 1. The submission titled **"SeatLock: Distributed High-Concurrency Flash-Sale & Tatkal Reservation Platform"** is an original work created by the undersigned students for Scalable Services (SEZG583).
@@ -70,3 +93,4 @@ We hereby certify that:
 1. **Student 1 (Lead)**: _______________________ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Date: 2026-10-21  
 2. **Student 2**: _______________________ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Date: 2026-10-21  
 3. **Student 3**: _______________________ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Date: 2026-10-21  
+

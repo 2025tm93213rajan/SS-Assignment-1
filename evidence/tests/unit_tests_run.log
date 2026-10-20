@@ -1,0 +1,129 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.15, pytest-9.1.1, pluggy-1.7.0 -- /usr/local/bin/python3.12
+cachedir: .pytest_cache
+rootdir: /app
+configfile: pytest.ini
+plugins: anyio-4.15.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collecting ... collected 4 items
+
+tests/test_br1_inventory_bound.py::test_br1_successful_reservation PASSED [ 25%]
+tests/test_br1_inventory_bound.py::test_br1_zero_overallocation_prevention PASSED [ 50%]
+tests/test_br1_inventory_bound.py::test_br1_cannot_reserve_more_than_initial_capacity PASSED [ 75%]
+tests/test_br2_atomic_concurrency.py::test_br2_atomic_concurrency_20_requests_for_5_capacity PASSED [100%]
+
+============================== 4 passed in 0.60s ===============================
+
+> seatlock-payment-service@1.0.0 test
+> jest
+
+  console.log
+    {"timestamp":"2026-10-20T21:43:30.565Z","service":"payment-service","level":"INFO","message":"Connected to MongoDB (payment_db)"}
+
+      at log (src/db.js:15:13)
+
+  console.log
+    {"timestamp":"2026-10-20T21:43:30.633Z","service":"payment-service","level":"INFO","message":"POST /api/v1/payments/charge 400 3ms","correlation_id":"corr-5f3d0d9c-85e"}
+
+      at ServerResponse.log (src/index.js:34:13)
+
+  console.log
+    {"timestamp":"2026-10-20T21:43:30.672Z","service":"payment-service","level":"INFO","message":"POST /api/v1/payments/charge 201 25ms","correlation_id":"corr-5be3472a-4fd"}
+
+      at ServerResponse.log (src/index.js:34:13)
+
+  console.log
+    {"timestamp":"2026-10-20T21:43:30.697Z","service":"payment-service","level":"INFO","message":"POST /api/v1/payments/charge 201 8ms","correlation_id":"corr-bb2cfbfc-ee4"}
+
+      at ServerResponse.log (src/index.js:34:13)
+
+  console.log
+    {"timestamp":"2026-10-20T21:43:30.702Z","service":"payment-service","level":"INFO","message":"POST /api/v1/payments/charge 201 3ms","correlation_id":"corr-db3854b6-434"}
+
+      at ServerResponse.log (src/index.js:34:13)
+
+  console.log
+    {"timestamp":"2026-10-20T21:43:30.718Z","service":"payment-service","level":"INFO","message":"POST /api/v1/payments/charge 201 8ms","correlation_id":"corr-e7e5342a-790"}
+
+      at ServerResponse.log (src/index.js:34:13)
+
+  console.log
+    {"timestamp":"2026-10-20T21:43:30.723Z","service":"payment-service","level":"INFO","message":"POST /api/v1/payments/charge 422 2ms","correlation_id":"corr-1e03a438-e8b"}
+
+      at ServerResponse.log (src/index.js:34:13)
+
+  console.log
+    {"timestamp":"2026-10-20T21:43:30.735Z","service":"payment-service","level":"INFO","message":"POST /api/v1/payments/charge 402 6ms","correlation_id":"corr-2619f96a-af3"}
+
+      at ServerResponse.log (src/index.js:34:13)
+
+PASS tests/test_br3_idempotency.test.js
+  Business Rule BR3: Two-Phase Cryptographic Idempotency Tests
+    ✓ BR3.1: Missing Idempotency-Key on unsafe charge operation returns 400 Bad Request (61 ms)
+    ✓ BR3.2: First call with unique Idempotency-Key successfully charges and persists 1 payment record (43 ms)
+    ✓ BR3.3: Replaying identical request with same key returns cached response with X-Idempotent-Replay header and zero duplicate charge (21 ms)
+    ✓ BR3.4: Reusing same Idempotency-Key with altered payload is rejected with 422 Unprocessable Entity (19 ms)
+    ✓ BR3.5: Downstream failure simulation returns 402 Payment Required and records failure (13 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        1.071 s, estimated 2 s
+Ran all test suites.
+============================= test session starts ==============================
+platform linux -- Python 3.12.15, pytest-9.1.1, pluggy-1.7.0 -- /usr/local/bin/python3.12
+cachedir: .pytest_cache
+rootdir: /app
+configfile: pytest.ini
+plugins: anyio-4.15.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collecting ... collected 3 items
+
+tests/test_ticketing.py::test_issue_pnr_and_berths_success PASSED        [ 33%]
+tests/test_ticketing.py::test_pnr_fulfillment_idempotent_reissue PASSED  [ 66%]
+tests/test_ticketing.py::test_compensating_cancellation PASSED           [100%]
+
+============================== 3 passed in 0.43s ===============================
+============================= test session starts ==============================
+platform linux -- Python 3.12.15, pytest-9.1.1, pluggy-1.7.0 -- /usr/local/bin/python3.12
+cachedir: .pytest_cache
+rootdir: /app
+configfile: pytest.ini
+plugins: anyio-4.15.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collecting ... collected 4 items
+
+tests/test_br4_saga_compensation.py::test_br4_happy_path_saga PASSED     [ 25%]
+tests/test_br4_saga_compensation.py::test_br4_payment_failure_triggers_compensating_inventory_release PASSED [ 50%]
+tests/test_br4_saga_compensation.py::test_br4_ticketing_failure_triggers_compensation PASSED [ 75%]
+tests/test_br4_saga_compensation.py::test_br4_inventory_exhausted_rejects_without_payment PASSED [100%]
+
+============================== 4 passed in 0.81s ===============================
+
+================================================================================
+  SEATLOCK: AUTOMATED UNIT TEST SUITE
+================================================================================
+Timestamp: 2026-10-21 03:13:25
+
+[RUNNING] Executing unit tests for Inventory Service (BR1 & BR2 Bounds)...
+[RESULT] Inventory Service (BR1 & BR2 Bounds): PASSED in 3.30s
+
+[RUNNING] Executing unit tests for Payment Service (BR3 Idempotency & SHA-256)...
+[RESULT] Payment Service (BR3 Idempotency & SHA-256): PASSED in 2.13s
+
+[RUNNING] Executing unit tests for Ticketing Service (Berth & PNR Fulfillment)...
+[RESULT] Ticketing Service (Berth & PNR Fulfillment): PASSED in 2.77s
+
+[RUNNING] Executing unit tests for Booking Service (BR4 Saga Rollback)...
+[RESULT] Booking Service (BR4 Saga Rollback): PASSED in 3.32s
+
+================================================================================
+  UNIT TEST SUMMARY REPORT
+================================================================================
+  [ PASS ] Inventory Service (BR1 & BR2 Bounds)
+  [ PASS ] Payment Service (BR3 Idempotency & SHA-256)
+  [ PASS ] Ticketing Service (Berth & PNR Fulfillment)
+  [ PASS ] Booking Service (BR4 Saga Rollback)
+--------------------------------------------------------------------------------
+Total Test Time: 11.51 seconds
+ALL UNIT TEST SUITES PASSED (100% SUCCESS RATE)
