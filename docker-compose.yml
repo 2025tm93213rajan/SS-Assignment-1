@@ -234,6 +234,27 @@ services:
     networks:
       - seatlock-network
 
+  # ============================================================================
+  # 4. Next.js 14 Frontend Cockpit Dashboard
+  # ============================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: seatlock-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+    depends_on:
+      api-gateway:
+        condition: service_started
+    networks:
+      - seatlock-network
+
+
 # ==============================================================================
 # Volumes & Isolated Bridge Network
 # ==============================================================================
