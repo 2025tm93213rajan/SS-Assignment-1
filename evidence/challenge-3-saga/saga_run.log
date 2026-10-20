@@ -1,0 +1,20 @@
+{
+  "scenario_1_happy_path": {
+    "booking_id": "book-0cd5ed2ffa98",
+    "pnr": "PNR-TATKAL-934319",
+    "status": "CONFIRMED",
+    "initial_available": 5,
+    "remaining_available": 3,
+    "notifications_dispatched": 1,
+    "result": "PASSED"
+  },
+  "scenario_2_compensation": {
+    "failed_booking_id": "book-f938e4dcbd34",
+    "status": "FAILED_COMPENSATED",
+    "compensation_reason": "Payment declined (Transaction declined by issuing bank. Initiating Saga compensation.). Reserved inventory seats released.",
+    "inventory_before": 3,
+    "inventory_after_compensation": 3,
+    "inventory_leak": 0,
+    "result": "PASSED"
+  }
+}

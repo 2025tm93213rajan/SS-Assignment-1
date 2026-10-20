@@ -2,24 +2,48 @@ import os
 import uuid
 import time
 import logging
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from fastapi import FastAPI, Request, Response, status
+from typing import List
+
+from fastapi import FastAPI, Request, Response, Depends, status, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text, select, delete
+from sqlalchemy.orm import selectinload
+from sqlalchemy.ext.asyncio import AsyncSession
 
-SERVICE_NAME = os.getenv("SERVICE_NAME", "booking-service")
-PORT = int(os.getenv("PORT", 8001))
+from src.config import settings
+from src.database import engine, Base, get_db
+from src.models import Booking, SagaStepLog
+from src.schemas import (
+    CreateBookingRequest, BookingResponse, CancelBookingResponse
+)
+from src.saga import SagaOrchestrator, SagaExecutionError
+from src.amqp import event_publisher
 
 logging.basicConfig(
-    level=os.getenv("LOG_LEVEL", "INFO"),
-    format='{"timestamp": "%(asctime)s", "level": "%(levelname)s", "service": "' + SERVICE_NAME + '", "message": "%(message)s"}'
+    level=settings.LOG_LEVEL,
+    format='{"timestamp": "%(asctime)s", "level": "%(levelname)s", "service": "' + settings.SERVICE_NAME + '", "message": "%(message)s"}'
 )
-logger = logging.getLogger(SERVICE_NAME)
+logger = logging.getLogger(settings.SERVICE_NAME)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Initializing booking database tables...")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    logger.info("Booking database tables initialized.")
+    await event_publisher.connect()
+    yield
+    await event_publisher.close()
+    await engine.dispose()
 
 app = FastAPI(
-    title="SeatLock Booking Service",
-    description="Saga orchestrator coordinating distributed reservations across Inventory, Payment, Ticketing & Notifications.",
+    title="SeatLock Booking & Saga Orchestration Service",
+    description="Distributed Saga Orchestrator managing multi-phase ticket reservation transactions with automated compensating rollbacks (BR4).",
     version="1.0.0",
+    lifespan=lifespan,
     docs_url="/docs",
     openapi_url="/openapi.json"
 )
@@ -48,27 +72,19 @@ async def correlation_id_middleware(request: Request, call_next):
     )
     return response
 
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    corr_id = getattr(request.state, "correlation_id", "unknown")
-    logger.error(f"Unhandled error: {str(exc)} correlation_id={corr_id}")
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={
-            "status": "error",
-            "code": "INTERNAL_SERVER_ERROR",
-            "message": "An unexpected error occurred in booking-service",
-            "correlation_id": corr_id,
-            "service": SERVICE_NAME,
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }
-    )
-
 @app.get("/health", tags=["Observability"])
 async def health_check():
+    db_healthy = True
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1;"))
+    except Exception:
+        db_healthy = False
+
     return {
-        "status": "UP",
-        "service": SERVICE_NAME,
+        "status": "UP" if db_healthy else "DEGRADED",
+        "service": settings.SERVICE_NAME,
+        "database": "connected" if db_healthy else "disconnected",
         "version": "1.0.0",
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
@@ -76,8 +92,131 @@ async def health_check():
 @app.get("/", tags=["Root"])
 async def root():
     return {
-        "service": SERVICE_NAME,
+        "service": settings.SERVICE_NAME,
         "status": "running",
         "docs": "/docs",
         "health": "/health"
     }
+
+@app.post(
+    "/api/v1/bookings", 
+    response_model=BookingResponse, 
+    status_code=status.HTTP_201_CREATED,
+    tags=["Saga Orchestration"]
+)
+async def create_booking(
+    request: CreateBookingRequest, 
+    req: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Executes the distributed reservation Saga:
+    1. Holds inventory in inventory_db (BR1, BR2)
+    2. Executes idempotent card charge in payment_db (BR3)
+       - If payment fails, triggers compensation: releases held inventory (BR4)
+    3. Issues official PNR and berths in ticketing_db
+    4. Publishes booking.confirmed AMQP event to RabbitMQ
+    5. Confirms booking
+    """
+    corr_id = getattr(req.state, "correlation_id", f"corr-{uuid.uuid4().hex[:12]}")
+    orchestrator = SagaOrchestrator()
+    try:
+        booking = await orchestrator.execute_booking_saga(request, db, corr_id)
+        return booking
+    except SagaExecutionError as e:
+        # Load steps for error response
+        stmt = select(Booking).where(Booking.booking_id == e.booking.booking_id).options(selectinload(Booking.steps))
+        res = await db.execute(stmt)
+        failed_booking = res.scalar_one_or_none() or e.booking
+
+        return JSONResponse(
+            status_code=e.status_code if e.status_code in [400, 402, 404, 409, 422, 500, 502, 503, 504] else 400,
+            content={
+                "status": "FAILED",
+                "error": e.message,
+                "booking": {
+                    "booking_id": failed_booking.booking_id,
+                    "status": failed_booking.status,
+                    "quota_id": failed_booking.quota_id,
+                    "total_amount": float(failed_booking.total_amount),
+                    "compensation_reason": failed_booking.compensation_reason,
+                    "reservation_id": failed_booking.reservation_id,
+                    "payment_id": failed_booking.payment_id,
+                    "pnr": failed_booking.pnr,
+                    "steps": [
+                        {
+                            "step_name": s.step_name,
+                            "status": s.status,
+                            "error_message": s.error_message,
+                            "timestamp": s.timestamp.isoformat()
+                        } for s in getattr(failed_booking, "steps", [])
+                    ]
+                },
+                "correlation_id": corr_id,
+                "service": settings.SERVICE_NAME
+            }
+        )
+
+@app.get(
+    "/api/v1/bookings/{booking_id}", 
+    response_model=BookingResponse,
+    tags=["Saga Orchestration"]
+)
+async def get_booking_by_id(
+    booking_id: str, 
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = select(Booking).where(Booking.booking_id == booking_id).options(selectinload(Booking.steps))
+    res = await db.execute(stmt)
+    booking = res.scalar_one_or_none()
+    if not booking:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=f"Booking '{booking_id}' not found."
+        )
+    return booking
+
+@app.get(
+    "/api/v1/bookings", 
+    response_model=List[BookingResponse],
+    tags=["Saga Orchestration"]
+)
+async def list_bookings(
+    limit: int = 50,
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = select(Booking).options(selectinload(Booking.steps)).order_by(Booking.created_at.desc()).limit(limit)
+    res = await db.execute(stmt)
+    return res.scalars().all()
+
+@app.post(
+    "/api/v1/bookings/{booking_id}/cancel", 
+    response_model=CancelBookingResponse,
+    tags=["Saga Orchestration"]
+)
+async def cancel_booking(
+    booking_id: str, 
+    req: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    corr_id = getattr(req.state, "correlation_id", f"corr-{uuid.uuid4().hex[:12]}")
+    orchestrator = SagaOrchestrator()
+    booking, steps = await orchestrator.cancel_booking(booking_id, db, corr_id)
+    if not booking:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=f"Booking '{booking_id}' not found."
+        )
+    return CancelBookingResponse(
+        booking_id=booking.booking_id,
+        status="CANCELLED",
+        message="Booking cancelled and compensation completed.",
+        compensation_steps=steps
+    )
+
+@app.post("/api/v1/bookings/reset", tags=["Testing & Benchmarking"])
+async def reset_bookings(db: AsyncSession = Depends(get_db)):
+    await db.execute(delete(SagaStepLog))
+    await db.execute(delete(Booking))
+    await db.commit()
+    return {"status": "RESET_COMPLETE", "message": "All bookings and saga traces cleared."}
