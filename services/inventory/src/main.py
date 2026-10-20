@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, Request, Response, Depends, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
@@ -154,7 +155,7 @@ async def health_check():
     db_healthy = True
     try:
         async with engine.connect() as conn:
-            await conn.execute("SELECT 1;")
+            await conn.execute(text("SELECT 1;"))
     except Exception:
         db_healthy = False
 

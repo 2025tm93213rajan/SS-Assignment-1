@@ -1,0 +1,18 @@
+{
+  "part_1_deduplication": {
+    "event_id": "evt-dup-test-1792353967",
+    "first_delivery_count": 1,
+    "second_delivery_count": 1,
+    "result": "PASSED"
+  },
+  "part_2_offline_catchup": {
+    "buffered_messages": 3,
+    "drained_messages": 0,
+    "events_verified": [
+      "evt-offline-01-1792353982",
+      "evt-offline-02-1792353982",
+      "evt-offline-03-1792353982"
+    ],
+    "result": "PASSED"
+  }
+}
