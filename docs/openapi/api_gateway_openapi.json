@@ -1,0 +1,85 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "SeatLock API Gateway",
+    "version": "1.0.0",
+    "description": "Unified perimeter API Gateway for SeatLock. Handles reverse proxying, correlation ID injection (X-Correlation-ID), and Redis-backed token bucket rate limiting (200 requests/minute)."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Local API Gateway Server"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Gateway Health Check",
+        "description": "Returns operational status of API Gateway and Redis connection.",
+        "responses": {
+          "200": {
+            "description": "Gateway is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "UP" },
+                    "service": { "type": "string", "example": "api-gateway" },
+                    "redis": { "type": "string", "example": "connected" },
+                    "timestamp": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bookings": {
+      "post": {
+        "summary": "Proxy to Booking Service",
+        "description": "Routes booking creation request to Booking Service on port 8001.",
+        "responses": {
+          "201": { "description": "Booking initiated" }
+        }
+      }
+    },
+    "/api/v1/inventory/quotas": {
+      "get": {
+        "summary": "Proxy to Inventory Service Quotas",
+        "description": "Routes quota queries to Inventory Service on port 8002.",
+        "responses": {
+          "200": { "description": "Quota inventory returned" }
+        }
+      }
+    },
+    "/api/v1/payments/charge": {
+      "post": {
+        "summary": "Proxy to Payment Service",
+        "description": "Routes idempotent payment charges to Payment Service on port 8003.",
+        "responses": {
+          "201": { "description": "Charge processed" }
+        }
+      }
+    },
+    "/api/v1/tickets/pnr/{pnr}": {
+      "get": {
+        "summary": "Proxy to Ticketing Service",
+        "description": "Routes PNR lookup queries to Ticketing Service on port 8005.",
+        "responses": {
+          "200": { "description": "Ticket record returned" }
+        }
+      }
+    },
+    "/api/v1/notifications/logs": {
+      "get": {
+        "summary": "Proxy to Notification Service",
+        "description": "Routes notification log queries to Notification Service on port 8004.",
+        "responses": {
+          "200": { "description": "Notification records returned" }
+        }
+      }
+    }
+  }
+}

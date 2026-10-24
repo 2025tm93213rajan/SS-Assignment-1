@@ -1,0 +1,134 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "SeatLock Notification Service",
+    "description": "Asynchronous event-driven notification service connected to RabbitMQ (AMQP) and MongoDB for booking confirmation alerts and consumer deduplication audit logging.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000/api/v1/notifications",
+      "description": "Via API Gateway"
+    },
+    {
+      "url": "http://localhost:8004/api/v1/notifications",
+      "description": "Direct Notification Service"
+    }
+  ],
+  "paths": {
+    "/logs": {
+      "get": {
+        "summary": "Retrieve notification audit logs",
+        "description": "Returns the most recent 50 dispatched notifications stored in MongoDB.",
+        "responses": {
+          "200": {
+            "description": "List of notification logs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotificationLog"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/booking/{booking_id}": {
+      "get": {
+        "summary": "Retrieve notifications for a specific booking",
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Unique booking identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notifications associated with the booking ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotificationLog"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/publish-test": {
+      "post": {
+        "summary": "Publish a test booking event to RabbitMQ topic exchange",
+        "description": "Publishes an event to exchange 'seatlock.events' with routing key 'booking.confirmed' or custom key.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "event_id": { "type": "string" },
+                  "booking_id": { "type": "string" },
+                  "quota_id": { "type": "string" },
+                  "event_name": { "type": "string" },
+                  "category": { "type": "string", "enum": ["RAILWAY_TATKAL", "CONCERT_EVENT", "EXPRESS_BUS"] },
+                  "pnr": { "type": "string" },
+                  "customer_phone": { "type": "string" },
+                  "customer_email": { "type": "string" },
+                  "amount": { "type": "number" },
+                  "routing_key": { "type": "string", "default": "booking.confirmed" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Event accepted and published to RabbitMQ exchange"
+          }
+        }
+      }
+    },
+    "/reset": {
+      "post": {
+        "summary": "Clear notification logs and deduplication cache",
+        "description": "Removes all documents from notification_logs and processed_events collections for test resets.",
+        "responses": {
+          "200": {
+            "description": "Reset confirmed"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "NotificationLog": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "notification_id": { "type": "string" },
+          "event_id": { "type": "string" },
+          "booking_id": { "type": "string" },
+          "recipient": { "type": "string" },
+          "channel": { "type": "string", "enum": ["SMS", "EMAIL"] },
+          "subject": { "type": "string", "nullable": true },
+          "message": { "type": "string" },
+          "status": { "type": "string", "enum": ["DELIVERED", "FAILED"] },
+          "metadata": { "type": "object" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}

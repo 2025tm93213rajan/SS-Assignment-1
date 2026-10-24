@@ -1,0 +1,127 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "SeatLock Payment Service",
+    "description": "Mock payment processor and two-phase SHA-256 idempotency ledger for ticket reservations.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000/api/v1/payments",
+      "description": "Via API Gateway"
+    },
+    {
+      "url": "http://localhost:8003/api/v1/payments",
+      "description": "Direct Payment Service"
+    }
+  ],
+  "paths": {
+    "/charge": {
+      "post": {
+        "summary": "Process an idempotent payment charge",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique UUID or transaction key to enforce idempotency.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Correlation-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["booking_id", "amount"],
+                "properties": {
+                  "booking_id": { "type": "string" },
+                  "amount": { "type": "number", "minimum": 0.01 },
+                  "currency": { "type": "string", "default": "INR" },
+                  "payment_method": { "type": "string", "default": "CARD" },
+                  "card_number": { "type": "string" },
+                  "force_failure": { "type": "boolean", "default": false },
+                  "delay_ms": { "type": "integer", "default": 0 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Payment successfully charged or replayed from cache",
+            "headers": {
+              "X-Idempotent-Replay": {
+                "schema": { "type": "boolean" },
+                "description": "Present and set to true if response was replayed from cache"
+              }
+            }
+          },
+          "400": { "description": "Missing Idempotency-Key or validation error" },
+          "402": { "description": "Card declined (simulated downstream failure)" },
+          "422": { "description": "Idempotency-Key re-used with mismatched request payload" },
+          "409": { "description": "Concurrent transaction currently in flight" }
+        }
+      }
+    },
+    "/{payment_id}": {
+      "get": {
+        "summary": "Retrieve payment record by ID",
+        "parameters": [
+          { "name": "payment_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Payment details retrieved" },
+          "404": { "description": "Payment not found" }
+        }
+      }
+    },
+    "/booking/{booking_id}": {
+      "get": {
+        "summary": "Retrieve payments associated with booking",
+        "parameters": [
+          { "name": "booking_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "List of payment transactions" }
+        }
+      }
+    },
+    "/chaos": {
+      "post": {
+        "summary": "Toggle simulated delay and failure modes",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": { "type": "boolean" },
+                  "delay_ms": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Chaos configuration updated" } }
+      }
+    },
+    "/reset": {
+      "post": {
+        "summary": "Reset payment and idempotency collections for repeatable tests",
+        "responses": { "200": { "description": "Collections cleared" } }
+      }
+    }
+  }
+}
